@@ -7,15 +7,28 @@ from typing import List, Optional, Dict, Any
 import numpy as np
 from datetime import datetime
 
-from .config import get_fusion_config, FusionEngineConfig
-from .data_models import (
-    AudioAnalysisResult,
-    VideoAnalysisResult,
-    SemanticAnalysisResult,
-    IndividualContribution,
-    GroupCollaborationReport,
-    CollaborationLevel,
-)
+try:
+    # 作为包导入时使用相对导入
+    from .config import get_fusion_config, FusionEngineConfig
+    from .data_models import (
+        AudioAnalysisResult,
+        VideoAnalysisResult,
+        SemanticAnalysisResult,
+        IndividualContribution,
+        GroupCollaborationReport,
+        CollaborationLevel,
+    )
+except ImportError:
+    # 独立运行时使用绝对导入
+    from config import get_fusion_config, FusionEngineConfig
+    from data_models import (
+        AudioAnalysisResult,
+        VideoAnalysisResult,
+        SemanticAnalysisResult,
+        IndividualContribution,
+        GroupCollaborationReport,
+        CollaborationLevel,
+    )
 
 
 class FusionEngine:
@@ -117,6 +130,10 @@ class FusionEngine:
         for person_id in video_result.person_attention_stats.keys():
             members.add(person_id)
         
+        # 如果没有任何成员，创建默认成员
+        if not members:
+            members = {"member_1"}
+        
         return sorted(list(members))
     
     def _compute_contributions(
@@ -135,6 +152,10 @@ class FusionEngine:
             stats.get("total_duration", 0)
             for stats in audio_result.speaker_stats.values()
         )
+        
+        # 如果没有发言数据，使用默认值
+        if total_speaking_time == 0:
+            total_speaking_time = 1.0
         
         for member_id in member_ids:
             contrib = IndividualContribution(person_id=member_id)

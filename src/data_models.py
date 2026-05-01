@@ -1,156 +1,153 @@
 """协作学习分析助手 - 数据模型定义"""
 
-from dataclasses import dataclass, field
+from __future__ import annotations
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from dataclasses import dataclass, field
 from enum import Enum
+from datetime import datetime
+import json
 
 
-class CollaborationLevel(Enum):
+class CollaborationLevel(str, Enum):
     """协作健康等级"""
-    EXCELLENT = "excellent"      # 85-100
-    GOOD = "good"                # 70-84
-    FAIR = "fair"                # 50-69
-    POOR = "poor"                # 30-49
-    CRITICAL = "critical"       # 0-29
+    EXCELLENT = "excellent"  # 85-100: 协作优秀
+    GOOD = "good"           # 70-84: 协作良好
+    FAIR = "fair"           # 50-69: 协作一般
+    POOR = "poor"           # 30-49: 协作较差
+    CRITICAL = "critical"   # 0-29: 协作严重不足
 
 
 @dataclass
 class SpeakingSegment:
-    """单次发言片段"""
+    """发言片段：谁在什么时候说了什么"""
     speaker_id: str
-    start_time: float  # 秒
-    end_time: float    # 秒
-    text: str = ""
-    duration: float = 0.0  # 自动计算
+    start_time: float
+    end_time: float
+    text: str
     
-    def __post_init__(self):
-        self.duration = self.end_time - self.start_time
+    @property
+    def duration(self) -> float:
+        """发言时长（秒）"""
+        return self.end_time - self.start_time
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "speaker_id": self.speaker_id,
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "text": self.text,
+            "duration": self.duration
+        }
 
 
 @dataclass
 class AudioAnalysisResult:
-    """语音智能体输出结果"""
+    """语音分析结果"""
     segments: List[SpeakingSegment] = field(default_factory=list)
-    
-    # 聚合指标
-    speaker_stats: Dict[str, dict] = field(default_factory=dict)
-    # {
-    #   "speaker_1": {
-    #     "total_duration": 45.2,
-    #     "turns": 8,
-    #     "longest_monologue": 12.3,
-    #     "silence_duration": 5.0,
-    #     "turn_taking_score": 0.85,  # 0-1，越高越有序
-    #   }
-    # }
-    
+    speaker_stats: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     total_duration: float = 0.0
-    timestamp: datetime = field(default_factory=datetime.now)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "segments": [s.to_dict() for s in self.segments],
+            "speaker_stats": self.speaker_stats,
+            "total_duration": self.total_duration
+        }
 
 
 @dataclass
 class AttentionTarget:
-    """注意力目标（谁或什么被关注）"""
-    target_id: str  # person_1, book_2, paper_1 等
-    target_type: str  # person / object
-    start_time: float
-    end_time: float
-    duration: float = 0.0
+    """注意力目标"""
+    target_type: str  # "person" / "material" / "unknown"
+    target_id: Optional[str] = None
+    start_time: float = 0.0
+    end_time: float = 0.0
     
-    def __post_init__(self):
-        self.duration = self.end_time - self.start_time
+    @property
+    def duration(self) -> float:
+        return self.end_time - self.start_time
 
 
 @dataclass
 class PointingEvent:
     """指点事件"""
     speaker_id: str
-    target_object: str  # book, paper, etc.
+    target_type: str  # "material" / "screen" / "person"
     start_time: float
     end_time: float
-    duration: float = 0.0
+    confidence: float = 1.0
     
-    def __post_init__(self):
-        self.duration = self.end_time - self.start_time
+    @property
+    def duration(self) -> float:
+        return self.end_time - self.start_time
 
 
 @dataclass
 class GazeEvent:
-    """视线关注事件"""
-    person_id: str
-    target_id: str  # 被关注的人的 ID
+    """视线事件"""
+    source_id: str
+    target_id: str
     start_time: float
     end_time: float
-    duration: float = 0.0
     
-    def __post_init__(self):
-        self.duration = self.end_time - self.start_time
+    @property
+    def duration(self) -> float:
+        return self.end_time - self.start_time
 
 
 @dataclass
 class VideoAnalysisResult:
-    """视觉智能体输出结果"""
-    # 每个人在不同时间段的注意力目标
+    """视觉分析结果"""
     attention_map: Dict[str, List[AttentionTarget]] = field(default_factory=dict)
-    
-    # 指点事件列表
     pointing_events: List[PointingEvent] = field(default_factory=list)
-    
-    # 视线交互事件列表
     gaze_events: List[GazeEvent] = field(default_factory=list)
+    cohesion_score: float = 0.5  # 小组凝聚度 (0-1)
+    person_attention_stats: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     
-    # 聚合指标
-    cohesion_score: float = 0.0  # 小组凝聚度 0-1
-    person_attention_stats: Dict[str, dict] = field(default_factory=dict)
-    # {
-    #   "person_1": {
-    #     "attention_to_others": 0.6,  # 关注他人的时间比例
-    #     "attention_to_materials": 0.3,
-    #     "pointing_frequency": 5,
-    #   }
-    # }
-    
-    timestamp: datetime = field(default_factory=datetime.now)
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "cohesion_score": self.cohesion_score,
+            "person_attention_stats": self.person_attention_stats,
+            "num_pointing_events": len(self.pointing_events),
+            "num_gaze_events": len(self.gaze_events)
+        }
 
 
 @dataclass
 class SemanticAnalysisResult:
-    """语义智能体输出结果"""
-    # 结构化分析结果
-    topic_relevance: float = 0.0  # 0-1
-    opinion_collisions: int = 0   # 观点碰撞次数（反驳/补充/质疑）
-    turn_taking_pattern: str = "balanced"  # balanced / monopolizing / chaotic
-    argument_depth_score: float = 0.0  # 0-1
-    consensus_quality: float = 0.0  # 共识达成效率
-    
-    # LLM 原始输出的证据
+    """语义分析结果"""
+    topic_relevance: float = 0.5          # 主题相关度 (0-1)
+    opinion_collisions: int = 0           # 观点碰撞次数
+    turn_taking_pattern: str = "balanced" # balanced/monopolizing/chaotic
+    argument_depth_score: float = 0.5     # 论证深度 (0-1)
+    consensus_quality: float = 0.5        # 共识质量 (0-1)
     evidence: List[str] = field(default_factory=list)
     
-    # 分段对话分析（如果启用批处理）
-    segment_analysis: List[dict] = field(default_factory=list)
-    
-    timestamp: datetime = field(default_factory=datetime.now)
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "topic_relevance": self.topic_relevance,
+            "opinion_collisions": self.opinion_collisions,
+            "turn_taking_pattern": self.turn_taking_pattern,
+            "argument_depth_score": self.argument_depth_score,
+            "consensus_quality": self.consensus_quality,
+            "evidence": self.evidence
+        }
 
 
 @dataclass
 class IndividualContribution:
     """个体贡献度"""
     person_id: str
-    speaking_contribution: float = 0.0  # 发言贡献
-    semantic_contribution: float = 0.0  # 语义相关度贡献
-    nonverbal_contribution: float = 0.0  # 非语言投入
-    pointing_contribution: float = 0.0  # 指点材料贡献
-    gaze_contribution: float = 0.0      # 视线跟随贡献
-    
-    # 综合得分
-    total_score: float = 0.0
-    
-    # 详细诊断
+    speaking_contribution: float = 0.0     # 发言贡献 (归一化)
+    semantic_contribution: float = 0.0     # 语义贡献
+    nonverbal_contribution: float = 0.0    # 非语言参与度
+    pointing_contribution: float = 0.0     # 指点贡献
+    gaze_contribution: float = 0.0         # 视线跟随贡献
+    total_score: float = 0.0               # 总分 (加权平均)
     diagnosis: Dict[str, Any] = field(default_factory=dict)
     
-    def calculate_total(self, weights: dict) -> float:
-        """根据权重计算总分"""
+    def calculate_total(self, weights: Dict[str, float]) -> float:
+        """计算加权总分"""
         self.total_score = (
             weights.get("speaking_time", 0.3) * self.speaking_contribution +
             weights.get("semantic_relevance", 0.3) * self.semantic_contribution +
@@ -159,66 +156,92 @@ class IndividualContribution:
             weights.get("gaze_attention", 0.1) * self.gaze_contribution
         )
         return self.total_score
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "person_id": self.person_id,
+            "speaking_contribution": round(self.speaking_contribution, 3),
+            "semantic_contribution": round(self.semantic_contribution, 3),
+            "nonverbal_contribution": round(self.nonverbal_contribution, 3),
+            "pointing_contribution": round(self.pointing_contribution, 3),
+            "gaze_contribution": round(self.gaze_contribution, 3),
+            "total_score": round(self.total_score, 3),
+            "diagnosis": self.diagnosis
+        }
 
 
 @dataclass
 class GroupCollaborationReport:
     """小组协作报告"""
     group_id: str
-    total_duration: float  # 分析的总时长（秒）
+    total_duration: float
+    member_ids: List[str]
     
-    # 成员列表
-    member_ids: List[str] = field(default_factory=list)
-    
-    # 各成员贡献度
-    individual_contributions: List[IndividualContribution] = field(default_factory=list)
-    
-    # 小组整体指标
-    balance_score: float = 0.0  # 均衡度（贡献分布的标准差）
-    collaboration_mode_score: float = 0.0  # 协作模式质量
-    overall_health_score: float = 0.0  # 协作健康分 0-100
-    
-    # 健康等级
-    health_level: CollaborationLevel = CollaborationLevel.FAIR
-    
-    # 诊断建议
-    diagnoses: List[str] = field(default_factory=list)
-    suggestions: List[str] = field(default_factory=list)
-    
-    # 详细数据
+    # 分析结果
     audio_result: Optional[AudioAnalysisResult] = None
     video_result: Optional[VideoAnalysisResult] = None
     semantic_result: Optional[SemanticAnalysisResult] = None
     
-    # 元数据
-    analysis_timestamp: datetime = field(default_factory=datetime.now)
-    analysis_version: str = "1.0.0"
+    # 融合指标
+    individual_contributions: List[IndividualContribution] = field(default_factory=list)
+    balance_score: float = 0.0                    # 均衡度
+    collaboration_mode_score: float = 0.0         # 协作模式质量
+    overall_health_score: float = 0.0             # 协作健康分 (0-100)
+    health_level: CollaborationLevel = CollaborationLevel.FAIR
     
-    def to_dict(self) -> dict:
-        """转换为字典格式"""
+    # 诊断
+    diagnoses: List[str] = field(default_factory=list)
+    suggestions: List[str] = field(default_factory=list)
+    
+    # 元数据
+    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """序列化为字典"""
         return {
             "group_id": self.group_id,
-            "total_duration": self.total_duration,
+            "total_duration": round(self.total_duration, 2),
             "member_ids": self.member_ids,
-            "overall_health_score": self.overall_health_score,
+            "overall_health_score": round(self.overall_health_score, 1),
             "health_level": self.health_level.value,
-            "balance_score": self.balance_score,
-            "collaboration_mode_score": self.collaboration_mode_score,
-            "individual_contributions": [
-                {
-                    "person_id": ic.person_id,
-                    "total_score": ic.total_score,
-                    "speaking": ic.speaking_contribution,
-                    "semantic": ic.semantic_contribution,
-                    "nonverbal": ic.nonverbal_contribution,
-                    "pointing": ic.pointing_contribution,
-                    "gaze": ic.gaze_contribution,
-                    "diagnosis": ic.diagnosis,
-                }
-                for ic in self.individual_contributions
-            ],
+            "balance_score": round(self.balance_score, 3),
+            "collaboration_mode_score": round(self.collaboration_mode_score, 3),
+            "individual_contributions": [c.to_dict() for c in self.individual_contributions],
             "diagnoses": self.diagnoses,
             "suggestions": self.suggestions,
-            "analysis_timestamp": self.analysis_timestamp.isoformat(),
-            "analysis_version": self.analysis_version,
+            "created_at": self.created_at,
+            "audio_summary": self.audio_result.to_dict() if self.audio_result else None,
+            "video_summary": self.video_result.to_dict() if self.video_result else None,
+            "semantic_summary": self.semantic_result.to_dict() if self.semantic_result else None
         }
+    
+    def to_json(self, indent: int = 2) -> str:
+        """序列化为 JSON"""
+        return json.dumps(self.to_dict(), ensure_ascii=False, indent=indent)
+    
+    def save(self, path: str) -> None:
+        """保存到文件"""
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(self.to_json())
+    
+    @classmethod
+    def load(cls, path: str) -> "GroupCollaborationReport":
+        """从文件加载"""
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        
+        report = cls(
+            group_id=data["group_id"],
+            total_duration=data["total_duration"],
+            member_ids=data["member_ids"]
+        )
+        
+        report.overall_health_score = data.get("overall_health_score", 0.0)
+        report.health_level = CollaborationLevel(data.get("health_level", "fair"))
+        report.balance_score = data.get("balance_score", 0.0)
+        report.collaboration_mode_score = data.get("collaboration_mode_score", 0.0)
+        report.diagnoses = data.get("diagnoses", [])
+        report.suggestions = data.get("suggestions", [])
+        report.created_at = data.get("created_at", "")
+        
+        return report

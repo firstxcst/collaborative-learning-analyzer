@@ -8,13 +8,24 @@ from typing import List, Optional, Dict, Any, Tuple
 import numpy as np
 import cv2
 
-from .config import get_video_config, VideoAgentConfig
-from .data_models import (
-    VideoAnalysisResult, 
-    AttentionTarget,
-    PointingEvent,
-    GazeEvent
-)
+try:
+    # 作为包导入时使用相对导入
+    from .config import get_video_config, VideoAgentConfig
+    from .data_models import (
+        VideoAnalysisResult, 
+        AttentionTarget,
+        PointingEvent,
+        GazeEvent
+    )
+except ImportError:
+    # 独立运行时使用绝对导入
+    from config import get_video_config, VideoAgentConfig
+    from data_models import (
+        VideoAnalysisResult, 
+        AttentionTarget,
+        PointingEvent,
+        GazeEvent
+    )
 
 
 class VideoAgent:

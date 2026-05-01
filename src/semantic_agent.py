@@ -7,8 +7,14 @@ import json
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 
-from .config import get_config, get_semantic_config, SemanticAgentConfig
-from .data_models import SemanticAnalysisResult, SpeakingSegment
+try:
+    # 作为包导入时使用相对导入
+    from .config import get_config, get_semantic_config, SemanticAgentConfig
+    from .data_models import SemanticAnalysisResult, SpeakingSegment
+except ImportError:
+    # 独立运行时使用绝对导入
+    from config import get_config, get_semantic_config, SemanticAgentConfig
+    from data_models import SemanticAnalysisResult, SpeakingSegment
 
 
 # 默认 Prompt 模板

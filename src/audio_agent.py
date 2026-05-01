@@ -7,8 +7,14 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any
 import numpy as np
 
-from .config import get_audio_config, AudioAgentConfig
-from .data_models import AudioAnalysisResult, SpeakingSegment
+try:
+    # 作为包导入时使用相对导入
+    from .config import get_audio_config, AudioAgentConfig
+    from .data_models import AudioAnalysisResult, SpeakingSegment
+except ImportError:
+    # 独立运行时使用绝对导入
+    from config import get_audio_config, AudioAgentConfig
+    from data_models import AudioAnalysisResult, SpeakingSegment
 
 
 class AudioAgent:

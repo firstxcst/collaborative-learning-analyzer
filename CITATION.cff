@@ -6,7 +6,7 @@ message: "If you use this software, please cite it as below."
 version: 1.0.0
 date-released: 2026-05-01
 url: "https://github.com/firstxcst/collaborative-learning-analyzer"
-license: MIT
+license: GPL-3.0
 keywords:
   - education
   - collaboration

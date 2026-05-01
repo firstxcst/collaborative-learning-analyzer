@@ -7,7 +7,7 @@ name = "collaborative-learning-analyzer"
 version = "1.0.0"
 description = "基于多模态 AI 的小组协作过程性评价工具"
 readme = "README.md"
-license = {text = "GPL-3.0"}
+license = {text = "AGPL-3.0"}
 requires-python = ">=3.10"
 authors = [
     {name = "Collaborative Learning Team"}
@@ -23,7 +23,7 @@ keywords = [
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Education",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "License :: OSI Approved :: GNU Affero General Public License v3 (AGPLv3)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",

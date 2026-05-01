@@ -408,16 +408,7 @@ pytest tests/ --cov=src --cov-report=html
 
 ## 📄 许可证
 
-本项目采用 **GNU Affero General Public License v3.0 (AGPL-3.0)** 许可证。
-
-核心条款:
-- ✅ 可以自由使用、研究、修改和分发
-- ✅ 衍生作品必须以相同许可证开源 (Copyleft)
-- ✅ **网络服务使用也必须开源** (比 GPL 更严格)
-- ✅ 必须保留原作者版权声明
-- ❌ 不能闭源商业使用
-
-详见 [LICENSE](LICENSE) 文件
+本项目采用 **GNU Affero General Public License v3.0 (AGPL-3.0)** 许可证
 
 
 

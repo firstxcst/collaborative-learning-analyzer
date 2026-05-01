@@ -1,0 +1,27 @@
+# Core
+numpy>=1.24.0
+pydub>=0.25.0
+librosa>=0.10.0
+
+# Audio - ASR & Speaker Diarization
+openai-whisper>=20231117
+# pyannote.audio>=3.1.0  # 需要手动安装: pip install pyannote.audio
+# resemblyzer>=0.1.2    # 可选，用于声纹注册
+
+# Vision - Object Detection & Tracking
+ultralytics>=8.0.0
+supervision>=0.18.0
+opencv-python>=4.8.0
+
+# LLM - Semantic Analysis
+openai>=1.0.0
+# dashscope>=1.14.0  # 可选，用于 Qwen
+
+# Utils
+python-dotenv>=1.0.0
+tqdm>=4.65.0
+
+# Visualization (optional)
+# matplotlib>=3.7.0
+# seaborn>=0.12.0
+# streamlit>=1.28.0

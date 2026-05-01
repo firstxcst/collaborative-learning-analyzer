@@ -1,0 +1,107 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "collaborative-learning-analyzer"
+version = "1.0.0"
+description = "基于多模态 AI 的小组协作过程性评价工具"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Collaborative Learning Team"}
+]
+keywords = [
+    "education",
+    "collaboration",
+    "multimodal-ai",
+    "speaker-diarization",
+    "yolo",
+    "llm",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Education",
+]
+
+dependencies = [
+    # Core
+    "numpy>=1.24.0",
+    "pydub>=0.25.0",
+    "librosa>=0.10.0",
+    
+    # Audio
+    "openai-whisper>=20231117",
+    # "pyannote.audio>=3.1.0",  # 需要手动安装，需要 HF token
+    # "resemblyzer>=0.1.2",    # 可选，用于声纹注册
+    
+    # Vision
+    "ultralytics>=8.0.0",
+    "supervision>=0.18.0",
+    "opencv-python>=4.8.0",
+    
+    # LLM
+    "openai>=1.0.0",
+    # "dashscope>=1.14.0",  # 可选，用于 Qwen
+    
+    # Utils
+    "python-dotenv>=1.0.0",
+    "tqdm>=4.65.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+]
+viz = [
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "streamlit>=1.28.0",
+]
+all = [
+    "collaborative-learning-analyzer[dev,viz]",
+]
+
+[project.urls]
+Homepage = "https://github.com/firstxcst/collaborative-learning-analyzer"
+Repository = "https://github.com/firstxcst/collaborative-learning-analyzer"
+Issues = "https://github.com/firstxcst/collaborative-learning-analyzer/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "collaborative_learning_analyzer*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.json", "*.txt"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"

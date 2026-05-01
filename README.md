@@ -396,6 +396,8 @@ pytest tests/ --cov=src --cov-report=html
 
 欢迎贡献代码、报告问题或提出建议！
 
+详细指南请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)
+
 1. Fork 本仓库
 2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
 3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)

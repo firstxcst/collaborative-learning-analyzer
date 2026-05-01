@@ -1,0 +1,20 @@
+# CITATION.cff
+
+cff-version: 1.2.0
+title: "Collaborative Learning Analyzer"
+message: "If you use this software, please cite it as below."
+version: 1.0.0
+date-released: 2026-05-01
+url: "https://github.com/firstxcst/collaborative-learning-analyzer"
+license: MIT
+keywords:
+  - education
+  - collaboration
+  - multimodal-ai
+  - speaker-diarization
+  - yolo
+abstract: |
+  基于多模态 AI 的小组协作过程性评价工具。
+  分析课堂小组讨论音视频，自动生成参与度与协作质量指标。
+authors:
+  - family-names: "Collaborative Learning Team"

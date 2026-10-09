@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 核心包声明为「零第三方依赖」，因此最小测试在纯净环境下也必须能跑
+  core-tests:
+    name: core (${{ matrix.os }} / py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: 安装核心包（不带任何 extra）
+        run: python -m pip install -e .
+      - name: 断言核心依赖确实为空
+        run: |
+          python -c "
+          import tomllib, pathlib, sys
+          data = tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8'))
+          deps = data['project']['dependencies']
+          assert deps == [], deps
+          print('core dependencies:', deps)
+          "
+      - name: 断言导入本包不会拉取重型依赖
+        run: |
+          python -c "
+          import collaborative_learning_analyzer, sys
+          heavy = [m for m in ('cv2','torch','whisper','ultralytics','numpy') if m in sys.modules]
+          assert not heavy, heavy
+          print('ok: no heavy deps imported')
+          "
+      - name: 安装测试依赖并运行非慢速测试
+        run: |
+          python -m pip install pytest
+          python -m pytest -m "not slow" -q
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install ruff
+      - run: ruff check src tests
+
+  full-suite-windows:
+    name: 全量测试（含真实媒体夹具）
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 安装（含音频与开发依赖）
+        run: python -m pip install -e ".[audio,dev]"
+      - name: 生成真实媒体夹具（Windows SAPI）
+        run: python tools/make_fixtures.py --out fixtures
+      - name: 全量测试
+        run: python -m pytest -q
+      - name: 上传夹具与分析报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixtures-and-reports
+          path: |
+            fixtures/manifest.json
+            results/
+          if-no-files-found: ignore

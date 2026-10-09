@@ -83,11 +83,30 @@ models/
 *.mov
 *.mkv
 
+# fixtures：媒体由 tools/make_fixtures.py 生成，不入库；
+# 但说明文档与局限声明必须入库（见 fixtures/README.md）
+fixtures/*.wav
+fixtures/*.mp4
+fixtures/speaker_references/
+fixtures/manifest.json
+
+# 构建产物
+*.egg-info/
+build/
+dist/
+venv/
+.venv/
+.venv-*/
+
 # Model weights (download separately)
 *.pt
 *.pth
 *.onnx
 *.bin
+
+# 本地实验残留（审计/验证过程的临时目录）
+.tmp-*/
+_tmp/
 
 # Logs
 *.log

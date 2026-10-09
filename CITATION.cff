@@ -1,20 +1,30 @@
-# CITATION.cff
-
 cff-version: 1.2.0
-title: "Collaborative Learning Analyzer"
-message: "If you use this software, please cite it as below."
-version: 1.0.0
-date-released: 2026-05-01
+title: "Collaborative Learning Analyzer：小组协作过程性分析工具"
+message: >-
+  如果你在研究或教学中使用了本软件，请按下述信息引用。
+  请注意：本工具当前处于 Alpha 阶段，指标权重尚未经过实证标定，
+  不得作为测量工具在论文中报告结果。
+type: software
+version: 1.1.0
+date-released: 2026-10-09
+license: AGPL-3.0-or-later
+repository-code: "https://github.com/firstxcst/collaborative-learning-analyzer"
 url: "https://github.com/firstxcst/collaborative-learning-analyzer"
-license: AGPL-3.0
 keywords:
-  - education
-  - collaboration
-  - multimodal-ai
-  - speaker-diarization
-  - yolo
-abstract: |
-  基于多模态 AI 的小组协作过程性评价工具。
-  分析课堂小组讨论音视频，自动生成参与度与协作质量指标。
+  - learning analytics
+  - collaborative learning
+  - process-oriented assessment
+  - multimodal analysis
+  - speaker diarization
+  - pose estimation
+abstract: >-
+  分析课堂小组讨论的音视频，从语音、语义与视觉三个模态提取参与度与协作质量指标，
+  并融合为协作健康分与逐人贡献度。当前版本仅适用于教学参考与工程验证，
+  语音/视觉链路的精度与指标效度尚未评估。
 authors:
-  - family-names: "Collaborative Learning Team"
+  # 原文件此处仅写了 "Collaborative Learning Team" 这个不存在的机构名，
+  # 而 CFF 规范要求提供可识别的作者身份。请替换为真实姓名与 ORCID：
+  - family-names: "firstxcst"
+    alias: "firstxcst"
+    website: "https://github.com/firstxcst"
+# 若本工具未来被某项研究引用，请在此补充 preferred-citation 字段。

@@ -1,94 +1,127 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "collaborative-learning-analyzer"
-version = "1.0.0"
-description = "基于多模态 AI 的小组协作过程性评价工具"
+version = "1.1.0"
+description = "基于多模态分析的小组协作过程性评价工具"
 readme = "README.md"
-license = {text = "AGPL-3.0"}
 requires-python = ">=3.10"
-authors = [
-    {name = "Collaborative Learning Team"}
-]
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
 keywords = [
     "education",
     "collaboration",
-    "multimodal-ai",
+    "learning-analytics",
+    "multimodal",
     "speaker-diarization",
-    "yolo",
-    "llm",
+    "pose-estimation",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Education",
-    "License :: OSI Approved :: GNU Affero General Public License v3 (AGPLv3)",
+    "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Education",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
+# 注意：PEP 639 生效后，license 表达式与 "License ::" 分类器不能同时存在，
+# 同时提供会导致 setuptools 直接拒绝构建（已实测）。许可证信息统一由上方 license 字段表达。
 
-dependencies = [
-    # Core
-    "numpy>=1.24.0",
-    "pydub>=0.25.0",
-    "librosa>=0.10.0",
-    
-    # Audio
-    "openai-whisper>=20231117",
-    # "pyannote.audio>=3.1.0",  # 需要手动安装，需要 HF token
-    # "resemblyzer>=0.1.2",    # 可选，用于声纹注册
-    
-    # Vision
-    "ultralytics>=8.0.0",
-    "supervision>=0.18.0",
-    "opencv-python>=4.8.0",
-    
-    # LLM
-    "openai>=1.0.0",
-    # "dashscope>=1.14.0",  # 可选，用于 Qwen
-    
-    # Utils
-    "python-dotenv>=1.0.0",
-    "tqdm>=4.65.0",
-]
+# 核心依赖为空：本包的核心计分、数据模型、语义编排、CLI 全部只依赖标准库，
+# 因此 `pip install collaborative-learning-analyzer` 不会再强迫用户下载 torch（约 2GB）。
+# 需要哪一模态就装对应的 extra。
+dependencies = []
 
 [project.optional-dependencies]
+# 语音：转写与音频探测
+audio = [
+    "numpy>=1.24,<3",
+    "soundfile>=0.12,<1",
+    "openai-whisper>=20231117",
+    "pydub>=0.25,<1",
+]
+# 说话人分离（需要 HuggingFace token）
+diarization = [
+    "collaborative-learning-analyzer[audio]",
+    "pyannote.audio>=3.1,<4",
+]
+# 声纹注册 / 身份对齐
+voiceprint = [
+    "numpy>=1.24,<3",
+    "librosa>=0.10,<1",
+    "resemblyzer>=0.1.2",
+]
+# 视觉：姿态、追踪、材料检测
+vision = [
+    "numpy>=1.24,<3",
+    "opencv-python>=4.8,<5",
+    "ultralytics>=8.0,<9",
+]
+# 语义：OpenAI 兼容接口
+llm = [
+    "openai>=1.0,<3",
+]
+# 语义：阿里云百炼 / DashScope（Qwen）
+qwen = [
+    "dashscope>=1.14",
+]
+
 dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "black>=23.0.0",
-    "isort>=5.12.0",
-    "mypy>=1.0.0",
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "black>=23.0",
+    "isort>=5.12",
+    "mypy>=1.8",
+    "ruff>=0.5",
 ]
-viz = [
-    "matplotlib>=3.7.0",
-    "seaborn>=0.12.0",
-    "streamlit>=1.28.0",
-]
+
 all = [
-    "collaborative-learning-analyzer[dev,viz]",
+    "collaborative-learning-analyzer[audio,diarization,voiceprint,vision,llm,dev]",
 ]
+
+[project.scripts]
+cla = "collaborative_learning_analyzer.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/firstxcst/collaborative-learning-analyzer"
 Repository = "https://github.com/firstxcst/collaborative-learning-analyzer"
 Issues = "https://github.com/firstxcst/collaborative-learning-analyzer/issues"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["src*", "collaborative_learning_analyzer*"]
+# --------------------------------------------------------------------------
+# 打包配置
+#
+# 源码位于 src/，但**安装后的顶层包名是 collaborative_learning_analyzer**。
+# 这样既保留了仓库现有的 src/ 目录布局，又避免把名为 `src` 的顶层包塞进
+# site-packages 造成命名空间污染（审计问题 #37）。
+# --------------------------------------------------------------------------
+[tool.setuptools]
+packages = ["collaborative_learning_analyzer"]
+
+[tool.setuptools.package-dir]
+collaborative_learning_analyzer = "src"
 
 [tool.setuptools.package-data]
-"*" = ["*.yaml", "*.json", "*.txt"]
+collaborative_learning_analyzer = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+markers = [
+    "slow: 需要下载模型或处理真实媒体的慢速测试",
+    "network: 需要网络或 API 密钥，默认跳过",
+]
 
 [tool.black]
 line-length = 100
-target-version = ["py310", "py311", "py312"]
+target-version = ["py310", "py311", "py312", "py313"]
 
 [tool.isort]
 profile = "black"
@@ -98,10 +131,17 @@ line_length = 100
 python_version = "3.10"
 warn_return_any = true
 warn_unused_ignores = true
+ignore_missing_imports = true
 disallow_untyped_defs = false
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_functions = ["test_*"]
-addopts = "-v --tb=short"
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.coverage.run]
+source = ["collaborative_learning_analyzer"]
+omit = ["*/tests/*"]

@@ -149,7 +149,7 @@ def test_no_head_tail_truncation_api_remains(agent):
 
 def test_heuristic_provider_produces_real_signals(agent):
     segments = make_segments(count=20, speaking_seconds=5.0)
-    result = agent.analyze(segments, context="光的散射")
+    result = agent.analyze(segments, context="散射, 波长, 分子")
     assert result.windows_analyzed >= 1
     assert result.complete is True
     assert result.opinion_collisions > 0          # 文本里含“但是”
@@ -164,6 +164,33 @@ def test_heuristic_without_topic_marks_relevance_unavailable(agent):
     result = agent.analyze(make_segments(count=10), context=None)
     assert result.topic_relevance is None
     assert result.complete is True  # 其余指标仍然可用
+
+
+def test_heuristic_uses_keywords_when_provided(agent):
+    """离线基线的主题相关度只在给出**关键词**时才计算。"""
+    segments = make_segments(count=20, speaking_seconds=5.0)
+    result = agent.analyze(segments, context="限制, 操作, 思路")
+    assert result.topic_relevance is not None
+    assert 0.0 <= result.topic_relevance <= 1.0
+
+
+def test_heuristic_sentence_topic_is_not_silently_proxied(agent):
+    """整句主题会被拆成关键词，但若一个都没命中，必须返回 None 并说明原因，
+    而不是拿「字符重合度」这类粗糙代理冒充测量。"""
+    segments = make_segments(count=10)
+    result = agent.analyze(segments, context="完全无关的另外一个话题")
+    assert result.topic_relevance is None
+    assert any("关键词" in w for w in result.warnings)
+
+
+def test_split_topic_keywords_handles_separators():
+    from collaborative_learning_analyzer.semantic_agent import split_topic_keywords
+
+    assert split_topic_keywords("蓝光, 散射、大气;波长") == ["蓝光", "散射", "大气", "波长"]
+    assert split_topic_keywords("") == []
+    assert split_topic_keywords(None) == []
+    # 单字会被过滤（中文单字信息量太低）
+    assert split_topic_keywords("光, 散射") == ["散射"]
 
 
 def test_empty_transcript_is_skipped_not_defaulted(agent):
@@ -189,7 +216,7 @@ def test_window_failure_is_recorded_not_hidden(agent, monkeypatch):
         raise SemanticParseError("模拟解析失败")
 
     monkeypatch.setattr(SemanticAgent, "analyze_window", boom)
-    result = agent.analyze(make_segments(count=100, speaking_seconds=5.0), context="主题")
+    result = agent.analyze(make_segments(count=100, speaking_seconds=5.0), context="散射, 波长")
     assert result.windows_analyzed == 0
     assert result.windows_failed >= 1
     assert any("失败" in w for w in result.warnings)
@@ -207,7 +234,7 @@ def test_partial_failure_aggregates_only_successful_windows(agent, monkeypatch):
         return original(self, segments, core, context)
 
     monkeypatch.setattr(SemanticAgent, "analyze_window", flaky)
-    result = agent.analyze(make_segments(count=100, speaking_seconds=6.0), context="主题")
+    result = agent.analyze(make_segments(count=100, speaking_seconds=6.0), context="散射, 波长")
     assert result.windows_analyzed >= 1
     assert result.windows_failed == 1
     assert result.complete is False

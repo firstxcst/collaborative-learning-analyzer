@@ -383,6 +383,23 @@ def test_video_ids_never_become_members(engine):
 
 # ------------------------------------------------------------------- 配置校验
 
+def test_problematic_group_produces_actionable_suggestions(engine):
+    """有明确问题时必须给出可执行建议（否则诊断就是摆设）。"""
+    report = score(engine, [280, 0, 0, 0], topic=0.2, collisions=0, depth=0.2, consensus=0.2)
+    assert report.suggestions, "低质量小组必须给出建议"
+    assert any("轮流" in s or "沉默" in s for s in report.suggestions)
+
+
+def test_healthy_group_needs_no_suggestions(engine):
+    """反面：表现优秀的组不该硬凑建议出来。"""
+    report = score(
+        engine, [75, 75, 75, 75], topic=1.0, collisions=12, depth=1.0, consensus=1.0,
+        duration=240.0,
+    )
+    assert report.health_level == CollaborationLevel.EXCELLENT
+    assert report.suggestions == []
+
+
 def test_config_validation_rejects_bad_weights():
     config = FusionEngineConfig()
     config.quality_weights = {"evenness": 0.5, "topic_relevance": 0.2, "interaction_depth": 0.2}

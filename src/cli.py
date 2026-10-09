@@ -9,10 +9,11 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 from typing import List, Optional
 
 from . import __version__
-from .config import get_paths
+from .config import SemanticAgentConfig, get_paths
 from .pipeline import analyze
 
 
@@ -50,6 +51,13 @@ def _build_parser() -> argparse.ArgumentParser:
     run.add_argument("--annotated-video", help="输出标注视频的路径")
 
     sub.add_parser("paths", help="显示运行时使用的目录")
+
+    demo = sub.add_parser(
+        "demo",
+        help="离线跑一遍完整流程（使用随仓库提供的示例转录，无需 API 密钥与重型依赖）",
+    )
+    demo.add_argument("--output", default="demo_report.json", help="报告输出文件名")
+    demo.add_argument("--html", help="同时输出一份可视化 HTML 报告的路径")
     return parser
 
 
@@ -75,33 +83,7 @@ def _cmd_analyze(args: argparse.Namespace) -> int:
     )
     report.save(str(output_path))
 
-    completeness = report.data_completeness
-    print("=" * 62)
-    print(f"小组 {report.group_id} · 协作健康分 {report.overall_health_score:.1f}"
-          f"（{report.health_level.value}）")
-    print("=" * 62)
-    print(f"  时长        : {report.total_duration:.1f} 秒")
-    print(f"  成员        : {', '.join(report.member_ids) or '（未识别）'}")
-    print(f"  活跃度      : {report.participation_activity:.2f}")
-    print(f"  均衡度      : {report.evenness:.2f}")
-    print(f"  主题相关度  : " + ("不可用" if report.topic_relevance is None else f"{report.topic_relevance:.2f}"))
-    print(f"  交互深度    : " + ("不可用" if report.interaction_depth is None else f"{report.interaction_depth:.2f}"))
-    print(f"  模态完整性  : " + ", ".join(
-        f"{k}={'有' if v else '无'}" for k, v in completeness.items()
-    ))
-    if report.diagnoses:
-        print("\n诊断：")
-        for item in report.diagnoses:
-            print(f"  - {item}")
-    if report.suggestions:
-        print("\n建议：")
-        for item in report.suggestions:
-            print(f"  - {item}")
-    if report.warnings:
-        print("\n⚠️ 过程告警（数据完整性问题，请务必阅读）：")
-        for item in report.warnings:
-            print(f"  - {item}")
-    print(f"\n报告已保存：{output_path}")
+    _print_report(report, output_path)
     return 0
 
 
@@ -120,12 +102,98 @@ def _cmd_paths(_args: argparse.Namespace) -> int:
     return 0
 
 
+#: 随仓库提供的示例转录（由 tools/make_fixtures.py 生成，非真实课堂数据）
+DEMO_TRANSCRIPT = Path("fixtures") / "discussion.transcript.json"
+
+
+def _cmd_demo(args: argparse.Namespace) -> int:
+    """零依赖离线演示：不需要 API 密钥，不需要 whisper/opencv/torch。"""
+    paths = get_paths(create=True)
+    transcript = paths.project_root / DEMO_TRANSCRIPT
+    if not transcript.is_file():
+        print(
+            f"找不到示例转录：{transcript}\n"
+            "本命令需要从仓库目录运行（示例数据随仓库提供）。\n"
+            "若文件缺失，可用 Windows 重新生成：python tools/make_fixtures.py --out fixtures",
+            file=sys.stderr,
+        )
+        return 2
+
+    with open(transcript, encoding="utf-8") as fh:
+        meta = json.load(fh)
+    # 离线规则基线需要关键词而非整句主题，见 README「离线模式」
+    topic = meta.get("topic_keywords") or meta.get("topic")
+
+    print("示例模式：使用随仓库提供的合成语音转录，离线规则基线分析。")
+    print("这不是真实课堂数据，输出仅用于演示流程与字段含义。\n")
+
+    report = analyze(
+        audio_path=None,
+        transcript_path=str(transcript),
+        topic=topic,
+        group_id="demo_group",
+        semantic_config=SemanticAgentConfig(provider="heuristic"),
+        skip_video=True,
+    )
+    output_path = paths.output / args.output
+    report.save(str(output_path))
+    _print_report(report, output_path)
+
+    if args.html:
+        from .render import render_report
+
+        html_path = Path(args.html)
+        html_path.parent.mkdir(parents=True, exist_ok=True)
+        render_report(report, html_path)
+        print(f"可视化报告已保存：{html_path}")
+    return 0
+
+
+def _print_report(report, output_path) -> None:
+    completeness = report.data_completeness
+    print("=" * 62)
+    print(f"小组 {report.group_id} · 协作健康分 {report.overall_health_score:.1f}"
+          f"（{report.health_level.value}）")
+    print("=" * 62)
+    print(f"  时长        : {report.total_duration:.1f} 秒")
+    print(f"  成员        : {', '.join(report.member_ids) or '（未识别）'}")
+    print(f"  活跃度      : {report.participation_activity:.2f}")
+    print(f"  均衡度      : {report.evenness:.2f}")
+    print(f"  主题相关度  : " + ("不可用" if report.topic_relevance is None else f"{report.topic_relevance:.2f}"))
+    print(f"  交互深度    : " + ("不可用" if report.interaction_depth is None else f"{report.interaction_depth:.2f}"))
+    print(f"  模态完整性  : " + ", ".join(
+        f"{k}={'有' if v else '无'}" for k, v in completeness.items()
+    ))
+    if report.individual_contributions:
+        print("\n逐人贡献度：")
+        for c in report.individual_contributions:
+            print(
+                f"  - {c.person_id}: 发言 {c.speaking_seconds:6.1f}s "
+                f"({c.speaking_share:5.1%})  贡献度 {c.total_score:.3f}"
+            )
+    if report.diagnoses:
+        print("\n诊断：")
+        for item in report.diagnoses:
+            print(f"  - {item}")
+    if report.suggestions:
+        print("\n建议：")
+        for item in report.suggestions:
+            print(f"  - {item}")
+    if report.warnings:
+        print("\n⚠️ 过程告警（数据完整性问题，请务必阅读）：")
+        for item in report.warnings:
+            print(f"  - {item}")
+    print(f"\n报告已保存：{output_path}")
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     args = _build_parser().parse_args(argv)
     if args.command == "analyze":
         return _cmd_analyze(args)
     if args.command == "paths":
         return _cmd_paths(args)
+    if args.command == "demo":
+        return _cmd_demo(args)
     return 1
 
 

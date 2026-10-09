@@ -26,6 +26,7 @@ __all__ = [
     "CollaborationLevel",
     "SpeakingSegment",
     "analyze",
+    "render_report",
     "__version__",
 ]
 
@@ -43,6 +44,7 @@ _LAZY: dict[str, tuple[str, str]] = {
     "CollaborationLevel": ("data_models", "CollaborationLevel"),
     "SpeakingSegment": ("data_models", "SpeakingSegment"),
     "analyze": ("pipeline", "analyze"),
+    "render_report": ("render", "render_report"),
 }
 
 if TYPE_CHECKING:  # pragma: no cover - 仅供类型检查器

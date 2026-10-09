@@ -59,6 +59,8 @@ SPEAKERS: List[Dict[str, Any]] = [
 
 #: 讨论脚本：围绕明确主题、含真实观点交锋的四人讨论
 DISCUSSION_TOPIC = "为什么天空是蓝色的"
+#: 主题关键词（离线规则基线需要关键词而不是整句，理由见 src/semantic_agent.py）
+DISCUSSION_KEYWORDS = "蓝光, 散射, 大气, 波长, 晚霞, 太阳光"
 
 SCRIPT: List[Dict[str, str]] = [
     {"speaker": "stu_A", "text": "我觉得这个问题要从光的散射来解释，太阳光里包含了各种颜色。"},
@@ -312,6 +314,7 @@ def build_audio(
                 ),
                 "language": "zh",
                 "topic": DISCUSSION_TOPIC,
+                "topic_keywords": DISCUSSION_KEYWORDS,
                 "synthesized": True,
                 "segments": segments,
             },

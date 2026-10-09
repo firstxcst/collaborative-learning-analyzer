@@ -92,8 +92,39 @@ _REASON_MARKERS = (
     "因为", "所以", "由于", "因此", "理由", "原因", "说明", "证据", "意味着", "导致",
     "because", "therefore", "since", "which means", "evidence",
 )
+#: 关键词分隔符
+_KEYWORD_SEPARATORS = (",", "，", "、", ";", "；", "|", "/", " ", "\t", "\n")
 
 _JSON_FENCE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
+
+
+def split_topic_keywords(topic: Optional[str]) -> List[str]:
+    """把主题文本按分隔符拆成关键词列表（单字会被过滤）。"""
+    if not topic:
+        return []
+    parts = [topic]
+    for sep in _KEYWORD_SEPARATORS:
+        parts = [chunk for part in parts for chunk in part.split(sep)]
+    return [p.strip() for p in parts if len(p.strip()) >= 2]
+
+
+def keywords_from_context(context: Optional[str]) -> List[str]:
+    """规则基线**只接受显式关键词列表**。
+
+    判定标准是「原始字符串里出现了分隔符」。原因：中文整句没有分词就无法拆词，
+    ``"为什么天空是蓝色的"`` 会被当成一个关键词，然后没有任何发言能命中它，
+    于是得到 0.0 —— 一个看起来像测量结果、实际只是"没匹配上"的数字。
+    本项目在审计中已经因为这类"粗糙代理冒充测量"付出过代价，因此这里选择返回
+    「不可用」，并把正确的用法写进告警。
+
+    也正因如此，``analyze()`` 在处理 ``heuristic`` 时要求 ``context`` 形如
+    ``"蓝光, 散射, 大气"``。
+    """
+    if not context:
+        return []
+    if not any(sep in context for sep in _KEYWORD_SEPARATORS if sep.strip()):
+        return []
+    return split_topic_keywords(context)
 
 
 def _coerce_float(value: Any, lo: float = 0.0, hi: float = 1.0) -> Optional[float]:
@@ -393,7 +424,13 @@ class SemanticAgent:
 
         * 观点碰撞：包含转折/反驳标记的发言轮次
         * 论证深度：包含因果/理由标记的轮次占比
-        * topic_relevance：仅在提供了主题时，用字符二元组重合度估计；否则返回 None
+        * topic_relevance：**仅在提供了关键词列表时**计算，取“命中至少一个关键词的
+          发言轮次占比”；只给整句主题时返回 None。
+
+        为什么这样做：整句主题只能用字符重合度近似，而中文里"的""是""什么"这类
+        高频字会让任何文本都"看起来相关"。让这种数字进入 0-100 的健康分，
+        就是用一个不可靠的代理冒充测量 —— 本项目在审计中已经因为同类问题付出过代价，
+        因此这里选择返回"不可用"，而不是返回一个看起来正常的数。
         """
         in_core = [s for s in segments if s.text.strip()]
         if not in_core:
@@ -406,18 +443,10 @@ class SemanticAgent:
         depth = reasoned / len(in_core)
 
         topic_relevance: Optional[float] = None
-        if topic:
-            topic_grams = {topic[i : i + 2] for i in range(max(1, len(topic) - 1))}
-            if topic_grams:
-                hits = 0
-                total = 0
-                for seg in in_core:
-                    grams = {seg.text[i : i + 2] for i in range(max(1, len(seg.text) - 1))}
-                    if grams:
-                        total += 1
-                        if topic_grams & grams:
-                            hits += 1
-                topic_relevance = hits / total if total else None
+        keywords = keywords_from_context(topic)
+        if keywords:
+            matched = sum(1 for s in in_core if any(k in s.text for k in keywords))
+            topic_relevance = matched / len(in_core)
 
         per_speaker: Dict[str, float] = {}
         by_speaker: Dict[str, List[SpeakingSegment]] = {}
@@ -446,7 +475,14 @@ class SemanticAgent:
         segments: Sequence[SpeakingSegment],
         context: Optional[str] = None,
     ) -> SemanticAnalysisResult:
-        """分析对话质量（长对话自动分窗，不做内容截断丢弃）。"""
+        """分析对话质量（长对话自动分窗，不做内容截断丢弃）。
+
+        Args:
+            segments: 发言片段
+            context: 讨论主题。对 LLM 提供者可以是自然语言描述；
+                对 ``heuristic`` 离线基线**必须是关键词列表**（用逗号、顿号或空格分隔），
+                否则无法可靠判断主题相关度，该指标会返回 None。
+        """
         result = SemanticAnalysisResult()
 
         if not segments or not any(s.text.strip() for s in segments):
@@ -518,4 +554,17 @@ class SemanticAgent:
             speaker: sum(scores) / len(scores) for speaker, scores in per_speaker_acc.items()
         }
         result.evidence = evidence[:20]
+
+        # 离线基线的主题相关度限制要明确说出来，避免读者以为"没算出来"是数据问题
+        if self.config.provider == "heuristic" and result.topic_relevance is None:
+            if context:
+                result.warnings.append(
+                    "离线规则基线未能计算主题相关度：它只接受**关键词列表**，"
+                    '请把 context 写成用逗号/顿号分隔的形式（例如 "蓝光, 散射, 大气"）。'
+                    "整句主题无法可靠判断相关度，因此该指标置为不可用而不是猜一个数。"
+                )
+            else:
+                result.warnings.append(
+                    "未提供主题关键词，离线规则基线不计算主题相关度。"
+                )
         return result

@@ -72,14 +72,28 @@
 
 ### 新增
 
+- **`cla demo`**：零依赖离线演示。不需要 API 密钥、不需要 whisper/opencv/torch，
+  用仓库自带的示例转录跑通完整流程，是首次体验路径
+- **自包含 HTML 报告**（`--html` 与 `render_report()`）：无任何外部资源引用，
+  可在离线/内网环境打开；不可用指标显示为「不可用」而不是画成 0
+- **转录导入**：分会场麦克风 / 教师字幕 / 外部 ASR 结果可直接跳过本地 ASR
+- **英文 README**（`README.md`）+ 中文 README（`README.zh-CN.md`）
+- **Issue / PR 模板**，其中明确要求不提交未脱敏的学生数据
 - `tools/make_fixtures.py`：生成**真实媒体**夹具（SAPI 合成语音 + 真实时间轴 + 真实视频），
   并显式声明其局限
-- `tests/`：完整测试套件（计分 / 数据模型 / 语义 / 语音 / 视觉 / 打包 / 端到端）
+- `tools/mutation_check.py`：变异测试工具
+- `tests/`：完整测试套件（计分 / 数据模型 / 语义 / 语音 / 视觉 / 渲染 / 打包 / 端到端）
 - `docs/SCORING_MODEL.md`：计分模型推导与「权重尚未实证标定」的说明
 - `docs/MUTATION_TESTING.md`：变异测试结果
 - `docs/AUDIT_REMEDIATION.md`：审计问题逐条修复对照（含 2 条撤回）
-- `cla` CLI：`analyze` / `paths` 子命令
+- `cla` CLI：`analyze` / `demo` / `paths` 子命令
 - GitHub Actions CI
+
+### 行为变更
+
+- **离线规则基线的 `context` 现在必须是关键词列表**（逗号/顿号分隔）。
+  此前它接受整句主题并用字符重合度近似，那会让一个不可靠的代理进入 0–100 的健康分；
+  现在传整句主题时 `topic_relevance` 返回 `null` 并给出如何正确使用的告警。
 
 ### 已知问题
 
